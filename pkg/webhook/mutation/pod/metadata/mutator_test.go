@@ -14,7 +14,7 @@ func TestSetInjectedAnnotation(t *testing.T) {
 		request := createTestMutationRequest(nil, nil)
 
 		require.False(t, IsInjected(request.BaseRequest))
-		SetInjectedAnnotation(request.Pod)
+		setInjectedAnnotation(request.Pod)
 		require.Len(t, request.Pod.Annotations, 1)
 		require.True(t, IsInjected(request.BaseRequest))
 	})
@@ -28,7 +28,7 @@ func TestWorkloadAnnotations(t *testing.T) {
 		request := createTestMutationRequest(nil, nil)
 
 		require.Equal(t, "not-found", maputils.GetField(request.Pod.Annotations, AnnotationWorkloadName, "not-found"))
-		SetWorkloadAnnotations(request.Pod, &WorkloadInfo{Name: workloadInfoName, Kind: workloadInfoKind})
+		setWorkloadAnnotations(request.Pod, &WorkloadInfo{Name: workloadInfoName, Kind: workloadInfoKind})
 		require.Len(t, request.Pod.Annotations, 2)
 		assert.Equal(t, workloadInfoName, maputils.GetField(request.Pod.Annotations, AnnotationWorkloadName, "not-found"))
 		assert.Equal(t, workloadInfoKind, maputils.GetField(request.Pod.Annotations, AnnotationWorkloadKind, "not-found"))
@@ -40,7 +40,7 @@ func TestWorkloadAnnotations(t *testing.T) {
 			TypeMeta:   metav1.TypeMeta{Kind: "SuperWorkload"},
 		}
 
-		SetWorkloadAnnotations(request.Pod, newWorkloadInfo(objectMeta))
+		setWorkloadAnnotations(request.Pod, newWorkloadInfo(objectMeta))
 		assert.Contains(t, request.Pod.Annotations, AnnotationWorkloadKind)
 		assert.Equal(t, "superworkload", request.Pod.Annotations[AnnotationWorkloadKind])
 	})

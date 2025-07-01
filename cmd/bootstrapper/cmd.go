@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	use = "bootstrap"
+	Use = "bootstrap"
 
 	TargetFolderFlag   = cmd.TargetFolderFlag
 	TargetVersionFlag  = "version"
@@ -48,7 +48,7 @@ func New() *cobra.Command {
 
 func newCmd(fs afero.Fs) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                use,
+		Use:                Use,
 		RunE:               run(afero.Afero{Fs: fs}),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		SilenceUsage:       true,

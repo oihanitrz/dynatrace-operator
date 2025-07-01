@@ -1,4 +1,4 @@
-package webhook
+package common
 
 import (
 	"testing"

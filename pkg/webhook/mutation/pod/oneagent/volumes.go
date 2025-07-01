@@ -4,12 +4,17 @@ import (
 	"path/filepath"
 
 	"github.com/Dynatrace/dynatrace-bootstrapper/pkg/configure/oneagent/preload"
+	volumeutils "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/volumes"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/volumes"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
+	dtcsi "github.com/Dynatrace/dynatrace-operator/pkg/controllers/csi"
+	csivolumes "github.com/Dynatrace/dynatrace-operator/pkg/controllers/csi/driver/volumes"
+	appvolumes "github.com/Dynatrace/dynatrace-operator/pkg/controllers/csi/driver/volumes/app"
 )
 
 const (
-	binSubPath       = "bin"
+	binVolumeName    = "oneagent-bin"
 	binInitMountPath = "/mnt/bin"
 
 	ldPreloadPath    = "/etc/ld.so.preload"
@@ -19,9 +24,8 @@ const (
 func addVolumeMounts(container *corev1.Container, installPath string) {
 	container.VolumeMounts = append(container.VolumeMounts,
 		corev1.VolumeMount{
-			Name:      volumes.ConfigVolumeName,
+			Name:      binVolumeName,
 			MountPath: installPath,
-			SubPath:   binSubPath,
 		},
 		corev1.VolumeMount{
 			Name:      volumes.ConfigVolumeName,
@@ -36,9 +40,50 @@ func addVolumeMounts(container *corev1.Container, installPath string) {
 func addInitVolumeMounts(initContainer *corev1.Container) {
 	initContainer.VolumeMounts = append(initContainer.VolumeMounts,
 		corev1.VolumeMount{
-			Name:      volumes.ConfigVolumeName,
+			Name:      binVolumeName,
 			MountPath: binInitMountPath,
-			SubPath:   binSubPath,
+		},
+	)
+}
+
+func addEmptyDirBinVolume(pod *corev1.Pod) {
+	if volumeutils.IsIn(pod.Spec.Volumes, binVolumeName) {
+		return
+	}
+
+	volumeSource := corev1.VolumeSource{
+		EmptyDir: &corev1.EmptyDirVolumeSource{},
+	}
+
+	pod.Spec.Volumes = append(pod.Spec.Volumes,
+		corev1.Volume{
+			Name: binVolumeName,
+			VolumeSource: volumeSource,
+		},
+	)
+}
+
+func addCSIBinVolume(pod *corev1.Pod, dkName string, maxTimeout string) {
+	if volumeutils.IsIn(pod.Spec.Volumes, binVolumeName) {
+		return
+	}
+
+	volumeSource := corev1.VolumeSource{
+		CSI: &corev1.CSIVolumeSource{
+			Driver:   dtcsi.DriverName,
+			ReadOnly: ptr.To(true),
+			VolumeAttributes: map[string]string{
+				csivolumes.CSIVolumeAttributeModeField:     appvolumes.Mode,
+				csivolumes.CSIVolumeAttributeDynakubeField: dkName,
+				csivolumes.CSIVolumeAttributeRetryTimeout:  maxTimeout,
+			},
+		},
+	}
+
+	pod.Spec.Volumes = append(pod.Spec.Volumes,
+		corev1.Volume{
+			Name: binVolumeName,
+			VolumeSource: volumeSource,
 		},
 	)
 }

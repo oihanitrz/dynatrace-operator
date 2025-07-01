@@ -3,17 +3,18 @@ package pod
 import (
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd"
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/configure"
+	"github.com/Dynatrace/dynatrace-operator/cmd/bootstrapper"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/latest/dynakube"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/arg"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/volumes"
+	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
 )
 
-func createInitContainerBase(pod *corev1.Pod, dk dynakube.DynaKube, isOpenShift bool) *corev1.Container {
+func (wh *webhook) createInitContainerBase(pod *corev1.Pod, dk dynakube.DynaKube) *corev1.Container {
 	args := []arg.Arg{
 		{
 			Name:  configure.ConfigFolderFlag,
@@ -31,9 +32,10 @@ func createInitContainerBase(pod *corev1.Pod, dk dynakube.DynaKube, isOpenShift 
 
 	initContainer := &corev1.Container{
 		Name:            dtwebhook.InstallContainerName,
-		Image:           dk.OneAgent().GetCustomCodeModulesImage(),
+		Command:         []string{bootstrapper.Use},
+		Image:           wh.webhookPodImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		SecurityContext: securityContextForInitContainer(pod, dk, isOpenShift),
+		SecurityContext: securityContextForInitContainer(pod, dk, wh.isOpenShift),
 		Resources:       initContainerResources(dk),
 		Args:            arg.ConvertArgsToStrings(args),
 	}

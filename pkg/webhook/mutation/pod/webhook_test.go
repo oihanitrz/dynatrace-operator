@@ -11,7 +11,7 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/scheme"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/scheme/fake"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/installconfig"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/events"
 	webhookmock "github.com/Dynatrace/dynatrace-operator/test/mocks/pkg/webhook"
 	"github.com/stretchr/testify/assert"

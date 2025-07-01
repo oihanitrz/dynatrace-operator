@@ -7,28 +7,12 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/injection/namespace/bootstrapperconfig"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/container"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/secret"
-	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	metacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/metadata"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func IsEnabled(mutationRequest *dtwebhook.MutationRequest) bool {
-	ffEnabled := mutationRequest.DynaKube.FF().IsNodeImagePull()
-	oaEnabled := oacommon.IsEnabled(mutationRequest.BaseRequest)
-
-	defaultVolumeType := oacommon.EphemeralVolumeType
-	if mutationRequest.DynaKube.OneAgent().IsCSIAvailable() {
-		defaultVolumeType = oacommon.CSIVolumeType
-	}
-
-	correctVolumeType := maputils.GetField(mutationRequest.Pod.Annotations, oacommon.AnnotationVolumeType, defaultVolumeType) == oacommon.EphemeralVolumeType
-
-	return ffEnabled && oaEnabled && correctVolumeType
-}
 
 func (wh *webhook) handle(mutationRequest *dtwebhook.MutationRequest) error {
 	wh.recorder.Setup(mutationRequest)
@@ -77,16 +61,11 @@ func (wh *webhook) isInjected(mutationRequest *dtwebhook.MutationRequest) bool {
 }
 
 func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest) error {
-	mutationRequest.InstallContainer = createInitContainerBase(mutationRequest.Pod, mutationRequest.DynaKube, wh.isOpenShift)
+	mutationRequest.InstallContainer = wh.createInitContainerBase(mutationRequest.Pod, mutationRequest.DynaKube)
 
 	err := addContainerAttributes(mutationRequest)
 	if err != nil {
 		return err
-	}
-
-	updated := oacommon.Mutate(mutationRequest)
-	if !updated {
-		oacommon.SetNotInjectedAnnotations(mutationRequest.Pod, NoMutationNeededReason)
 	}
 
 	err = addPodAttributes(mutationRequest)
@@ -96,12 +75,15 @@ func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest)
 		return err
 	}
 
-	err = metacommon.Mutate(wh.metaClient, mutationRequest)
+	err = wh.oaMutator.Mutate(mutationRequest)
 	if err != nil {
 		return err
 	}
 
-	oacommon.SetInjectedAnnotation(mutationRequest.Pod)
+	err = wh.metaMutator.Mutate(mutationRequest)
+	if err != nil {
+		return err
+	}
 
 	addInitContainerToPod(mutationRequest.Pod, mutationRequest.InstallContainer)
 	wh.recorder.SendPodInjectEvent()
@@ -119,7 +101,7 @@ func (wh *webhook) handlePodReinvocation(mutationRequest *dtwebhook.MutationRequ
 		return false
 	}
 
-	updated := oacommon.Reinvoke(mutationRequest.BaseRequest)
+	updated := wh.oaMutator.Reinvoke(mutationRequest.ToReinvocationRequest())
 
 	return updated
 }

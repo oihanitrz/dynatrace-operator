@@ -2,7 +2,7 @@ package oneagent
 
 import (
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -13,7 +13,13 @@ const (
 	EphemeralVolumeType = "ephemeral"
 )
 
-func IsEnabled(request *dtwebhook.BaseRequest) bool {
+type Mutator struct {}
+
+func NewMutator(webhookImageName string) dtwebhook.Mutator {
+	return &Mutator{}
+}
+
+func (mut *Mutator) IsEnabled(request *dtwebhook.BaseRequest) bool {
 	enabledOnPod := maputils.GetFieldBool(request.Pod.Annotations, AnnotationInject, request.DynaKube.FF().IsAutomaticInjection())
 	enabledOnDynakube := request.DynaKube.OneAgent().GetNamespaceSelector() != nil
 
@@ -28,7 +34,7 @@ func IsEnabled(request *dtwebhook.BaseRequest) bool {
 	return matchesNamespaceSelector && enabledOnPod && enabledOnDynakube
 }
 
-func IsInjected(request *dtwebhook.BaseRequest) bool {
+func (mut *Mutator) IsInjected(request *dtwebhook.BaseRequest) bool {
 	return maputils.GetFieldBool(request.Pod.Annotations, AnnotationInjected, false)
 }
 

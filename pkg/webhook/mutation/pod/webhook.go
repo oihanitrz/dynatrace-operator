@@ -9,7 +9,7 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	k8spod "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/pod"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/events"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,12 +38,14 @@ func AddWebhookToManager(ctx context.Context, mgr manager.Manager, ns string, is
 }
 
 type webhook struct {
+	metaMutator dtwebhook.Mutator
+	oaMutator dtwebhook.Mutator
+
 	recorder events.EventRecorder
 	decoder  admission.Decoder
 
 	kubeClient  client.Client
 	apiReader   client.Reader
-	metaClient  client.Client
 	isOpenShift bool
 
 	webhookPodImage  string

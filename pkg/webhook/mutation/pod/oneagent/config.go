@@ -20,6 +20,9 @@ const (
 	// "all" if not set.
 	AnnotationTechnologies = exp.OANodeImagePullTechnologiesKey
 
+	// AnnotationFlavor can be set on a Pod to configure which code modules flavor to download.
+	AnnotationFlavor = "oneagent.dynatrace.com/flavor"
+
 	// AnnotationInstallPath can be set on a Pod to configure on which directory the OneAgent will be available from,
 	// defaults to DefaultInstallPath if not set.
 	AnnotationInstallPath = AnnotationPrefix + ".dynatrace.com/install-path"

@@ -1,17 +1,45 @@
 package oneagent
 
 import (
+	"net/url"
+
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd"
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/configure"
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/move"
+	"github.com/Dynatrace/dynatrace-operator/cmd/bootstrapper"
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/latest/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/arg"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func mutateInitContainer(mutationRequest *dtwebhook.MutationRequest, installPath string) error {
+	isCSI := isCSIVolume(mutationRequest)
+	isSelfExtractingImage := isSelfExtractingImage(mutationRequest, isCSI)
+
+	if isCSI {
+		addCSIBinVolume(
+			mutationRequest.Pod,
+			mutationRequest.DynaKube.Name,
+			mutationRequest.DynaKube.FF().GetCSIMaxRetryTimeout().String())
+	} else {
+		addEmptyDirBinVolume(mutationRequest.Pod)
+	}
+
+	if isSelfExtractingImage {
+		mutationRequest.InstallContainer.Command = []string{}
+	} else if !isCSI {
+		downloadArgs := []arg.Arg{
+			{Name: bootstrapper.TargetVersionFlag, Value: mutationRequest.DynaKube.OneAgent().GetCodeModulesVersion()},
+			{Name: bootstrapper.TechnologiesFlag, Value: url.QueryEscape(maputils.GetField(mutationRequest.Pod.Annotations, AnnotationTechnologies, "all"))},
+			{Name: bootstrapper.FlavorFlag, Value: maputils.GetField(mutationRequest.Pod.Annotations, AnnotationFlavor, "")},
+		}
+
+		mutationRequest.InstallContainer.Args = append(mutationRequest.InstallContainer.Args, arg.ConvertArgsToStrings(downloadArgs)...)
+	}
+
 	addInitVolumeMounts(mutationRequest.InstallContainer)
 
 	return addInitArgs(*mutationRequest.Pod, mutationRequest.InstallContainer, mutationRequest.DynaKube, installPath)
@@ -57,6 +85,21 @@ func getTechnology(pod corev1.Pod, dk dynakube.DynaKube) string {
 	}
 
 	return ""
+}
+
+func isSelfExtractingImage(mutationRequest *dtwebhook.MutationRequest, isCSI bool) bool {
+	ffEnabled := mutationRequest.DynaKube.FF().IsNodeImagePull()
+
+	return ffEnabled && !isCSI
+}
+
+func isCSIVolume(mutationRequest *dtwebhook.MutationRequest) bool {
+	defaultVolumeType := EphemeralVolumeType
+	if mutationRequest.DynaKube.OneAgent().IsCSIAvailable() {
+		defaultVolumeType = CSIVolumeType
+	}
+
+	return maputils.GetField(mutationRequest.Pod.Annotations, AnnotationVolumeType, defaultVolumeType) == CSIVolumeType
 }
 
 func HasPodUserSet(ctx *corev1.PodSecurityContext) bool {

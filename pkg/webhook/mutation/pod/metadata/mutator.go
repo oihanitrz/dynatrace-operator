@@ -4,15 +4,28 @@ import (
 	"maps"
 
 	podattr "github.com/Dynatrace/dynatrace-bootstrapper/cmd/configure/attributes/pod"
+	"github.com/Dynatrace/dynatrace-operator/cmd/bootstrapper"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/arg"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func IsEnabled(request *dtwebhook.BaseRequest) bool {
+type Mutator struct {
+	metaClient client.Client
+}
+
+func NewMutator(metaClient client.Client) dtwebhook.Mutator {
+	return &Mutator{
+		metaClient: metaClient,
+	}
+}
+
+func (mut *Mutator) IsEnabled(request *dtwebhook.BaseRequest) bool {
+	// TODO: handle the implicit metadata-enrichment in the node-image-pull-case
 	enabledOnPod := maputils.GetFieldBool(request.Pod.Annotations, AnnotationInject,
 		request.DynaKube.FF().IsAutomaticInjection())
 	enabledOnDynakube := request.DynaKube.MetadataEnrichmentEnabled()
@@ -28,14 +41,14 @@ func IsEnabled(request *dtwebhook.BaseRequest) bool {
 	return matchesNamespace && enabledOnPod && enabledOnDynakube
 }
 
-func IsInjected(request *dtwebhook.BaseRequest) bool {
+func (mut *Mutator) IsInjected(request *dtwebhook.BaseRequest) bool {
 	return maputils.GetFieldBool(request.Pod.Annotations, AnnotationInjected, false)
 }
 
-func Mutate(metaClient client.Client, request *dtwebhook.MutationRequest) error {
+func (mut *Mutator) Mutate(request *dtwebhook.MutationRequest) error {
 	log.Info("adding metadata-enrichment to pod", "name", request.PodName())
 
-	workloadInfo, err := RetrieveWorkload(metaClient, request)
+	workloadInfo, err := retrieveWorkload(mut.metaClient, request)
 	if err != nil {
 		return err
 	}
@@ -46,8 +59,8 @@ func Mutate(metaClient client.Client, request *dtwebhook.MutationRequest) error 
 		WorkloadName: workloadInfo.Name,
 	}
 	addMetadataToInitArgs(request, &attributes)
-	SetInjectedAnnotation(request.Pod)
-	SetWorkloadAnnotations(request.Pod, workloadInfo)
+	setInjectedAnnotation(request.Pod)
+	setWorkloadAnnotations(request.Pod, workloadInfo)
 
 	args, err := podattr.ToArgs(attributes)
 	if err != nil {
@@ -57,6 +70,15 @@ func Mutate(metaClient client.Client, request *dtwebhook.MutationRequest) error 
 	request.InstallContainer.Args = append(request.InstallContainer.Args, args...)
 
 	return nil
+}
+
+func turnOnMetadataEnrichment(request *dtwebhook.MutationRequest) {
+	request.InstallContainer.Args = append(request.InstallContainer.Args, arg.ConvertArgsToStrings([]arg.Arg{{Name: bootstrapper.MetadataEnrichmentFlag}})...)
+
+}
+
+func (mut *Mutator) Reinvoke(request *dtwebhook.ReinvocationRequest) bool {
+	return false
 }
 
 func addMetadataToInitArgs(request *dtwebhook.MutationRequest, attributes *podattr.Attributes) {
@@ -74,7 +96,7 @@ func addMetadataToInitArgs(request *dtwebhook.MutationRequest, attributes *podat
 	maps.Copy(attributes.UserDefined, copiedMetadataAnnotations)
 }
 
-func SetInjectedAnnotation(pod *corev1.Pod) {
+func setInjectedAnnotation(pod *corev1.Pod) {
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)
 	}
@@ -82,7 +104,7 @@ func SetInjectedAnnotation(pod *corev1.Pod) {
 	pod.Annotations[AnnotationInjected] = "true"
 }
 
-func SetWorkloadAnnotations(pod *corev1.Pod, workload *WorkloadInfo) {
+func setWorkloadAnnotations(pod *corev1.Pod, workload *WorkloadInfo) {
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)
 	}

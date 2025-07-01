@@ -10,6 +10,8 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/oneagentapm"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/events"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/metadata"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,13 +54,14 @@ func registerInjectEndpoint(ctx context.Context, mgr manager.Manager, webhookNam
 	}
 
 	mgr.GetWebhookServer().Register("/inject", &webhooks.Admission{Handler: &webhook{
-		metaClient: metaClient,
-		kubeClient: kubeClient,
+		oaMutator:        oneagent.NewMutator(webhookPodImage),
+		metaMutator:      metadata.NewMutator(metaClient),
+		kubeClient:       kubeClient,
 		apiReader:        apiReader,
-		recorder: eventRecorder,
-		isOpenShift: isOpenShift,
+		recorder:         eventRecorder,
+		isOpenShift:      isOpenShift,
 		webhookNamespace: webhookNamespace,
-		webhookPodImage: webhookPodImage,
+		webhookPodImage:  webhookPodImage,
 		deployedViaOLM:   kubesystem.IsDeployedViaOlm(*webhookPod),
 		decoder:          admission.NewDecoder(mgr.GetScheme()),
 	}})

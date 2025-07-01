@@ -4,7 +4,7 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/latest/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -12,23 +12,23 @@ const (
 	isInjectedEnv = "DT_CM_INJECTED"
 )
 
-func Mutate(request *dtwebhook.MutationRequest) bool {
+func (mut *Mutator) Mutate(request *dtwebhook.MutationRequest) error {
 	installPath := maputils.GetField(request.Pod.Annotations, AnnotationInstallPath, DefaultInstallPath)
 
 	err := mutateInitContainer(request, installPath)
 	if err != nil {
-		log.Error(err, "failed to mutate the bootstrapping init-container")
-
-		return false
+		return err
 	}
 
-	return mutateUserContainers(request.BaseRequest, installPath)
+	mutateUserContainers(request.BaseRequest, installPath)
+
+	return nil
 }
 
-func Reinvoke(request *dtwebhook.BaseRequest) bool {
+func (mut *Mutator) Reinvoke(request *dtwebhook.ReinvocationRequest) bool {
 	installPath := maputils.GetField(request.Pod.Annotations, AnnotationInstallPath, DefaultInstallPath)
 
-	return mutateUserContainers(request, installPath)
+	return mutateUserContainers(request.BaseRequest, installPath)
 }
 
 func containerIsInjected(container corev1.Container) bool {

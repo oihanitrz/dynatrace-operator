@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	kubeobjects "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/pod"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +27,7 @@ func newWorkloadInfo(partialObjectMetadata *metav1.PartialObjectMetadata) *Workl
 	}
 }
 
-func RetrieveWorkload(metaClient client.Client, request *dtwebhook.MutationRequest) (*WorkloadInfo, error) {
+func retrieveWorkload(metaClient client.Client, request *dtwebhook.MutationRequest) (*WorkloadInfo, error) {
 	workload, err := findRootOwnerOfPod(request.Context, metaClient, request.Pod, request.Namespace.Name)
 	if err != nil {
 		return nil, err
