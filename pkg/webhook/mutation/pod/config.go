@@ -7,3 +7,9 @@ import (
 var (
 	log = logd.Get().WithName("pod-mutation")
 )
+
+const (
+	NoBootstrapperConfigReason = "NoBootstrapperConfig"
+	NoCodeModulesImageReason   = "NoCodeModulesImage"
+	NoMutationNeededReason     = "NoMutationNeeded"
+)

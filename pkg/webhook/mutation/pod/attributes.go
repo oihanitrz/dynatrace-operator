@@ -1,4 +1,4 @@
-package v2
+package pod
 
 import (
 	"fmt"
@@ -10,12 +10,11 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/mounts"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/common/volumes"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/metadata"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/volumes"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (wh *Injector) addPodAttributes(request *dtwebhook.MutationRequest) error {
+func addPodAttributes(request *dtwebhook.MutationRequest) error {
 	attrs := podattr.Attributes{
 		PodInfo: podattr.PodInfo{
 			PodName:       createEnvVarRef(consts.K8sPodNameEnv),
@@ -38,11 +37,6 @@ func (wh *Injector) addPodAttributes(request *dtwebhook.MutationRequest) error {
 	}
 
 	request.InstallContainer.Env = append(request.InstallContainer.Env, envs...)
-
-	err := metadata.Mutate(wh.metaClient, request, &attrs)
-	if err != nil {
-		return err
-	}
 
 	args, err := podattr.ToArgs(attrs)
 	if err != nil {

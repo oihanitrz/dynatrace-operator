@@ -5,7 +5,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/oneagent"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -14,7 +13,7 @@ const (
 )
 
 func Mutate(request *dtwebhook.MutationRequest) bool {
-	installPath := maputils.GetField(request.Pod.Annotations, oacommon.AnnotationInstallPath, oacommon.DefaultInstallPath)
+	installPath := maputils.GetField(request.Pod.Annotations, AnnotationInstallPath, DefaultInstallPath)
 
 	err := mutateInitContainer(request, installPath)
 	if err != nil {
@@ -27,7 +26,7 @@ func Mutate(request *dtwebhook.MutationRequest) bool {
 }
 
 func Reinvoke(request *dtwebhook.BaseRequest) bool {
-	installPath := maputils.GetField(request.Pod.Annotations, oacommon.AnnotationInstallPath, oacommon.DefaultInstallPath)
+	installPath := maputils.GetField(request.Pod.Annotations, AnnotationInstallPath, DefaultInstallPath)
 
 	return mutateUserContainers(request, installPath)
 }
@@ -50,15 +49,15 @@ func addOneAgentToContainer(dk dynakube.DynaKube, container *corev1.Container, n
 	log.Info("adding OneAgent to container", "name", container.Name)
 
 	addVolumeMounts(container, installPath)
-	oacommon.AddDeploymentMetadataEnv(container, dk)
-	oacommon.AddPreloadEnv(container, installPath)
+	AddDeploymentMetadataEnv(container, dk)
+	AddPreloadEnv(container, installPath)
 
 	if dk.Spec.NetworkZone != "" {
-		oacommon.AddNetworkZoneEnv(container, dk.Spec.NetworkZone)
+		AddNetworkZoneEnv(container, dk.Spec.NetworkZone)
 	}
 
 	if dk.FF().IsLabelVersionDetection() {
-		oacommon.AddVersionDetectionEnvs(container, namespace)
+		AddVersionDetectionEnvs(container, namespace)
 	}
 
 	setIsInjectedEnv(container)

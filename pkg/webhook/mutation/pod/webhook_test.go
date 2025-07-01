@@ -344,8 +344,6 @@ func createTestWebhook(v1, v2 dtwebhook.PodInjector, objects []client.Object) *w
 	decoder := admission.NewDecoder(scheme.Scheme)
 
 	return &webhook{
-		v1:               v1,
-		v2:               v2,
 		apiReader:        fake.NewClient(objects...),
 		decoder:          decoder,
 		webhookNamespace: testNamespaceName,

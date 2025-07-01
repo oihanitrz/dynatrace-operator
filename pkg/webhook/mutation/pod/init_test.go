@@ -1,4 +1,4 @@
-package v2
+package pod
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/mounts"
 	volumeutils "github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/volumes"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/oneagent"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/common/volumes"
+	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/volumes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"

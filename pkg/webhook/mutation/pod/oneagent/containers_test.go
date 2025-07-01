@@ -8,7 +8,6 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/latest/dynakube/oneagent"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/oneagent"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +47,7 @@ func TestMutate(t *testing.T) {
 		expectedInstallPath := "my-install"
 		request := createTestMutationRequestWithoutInjectedContainers()
 		request.Pod.Annotations = map[string]string{
-			oacommon.AnnotationInstallPath: expectedInstallPath,
+			AnnotationInstallPath: expectedInstallPath,
 		}
 
 		updated := Mutate(request)
@@ -57,7 +56,7 @@ func TestMutate(t *testing.T) {
 		assert.Contains(t, request.InstallContainer.Args, "--"+configure.InstallPathFlag+"="+expectedInstallPath)
 
 		for _, c := range request.Pod.Spec.Containers {
-			preload := env.FindEnvVar(c.Env, oacommon.PreloadEnv)
+			preload := env.FindEnvVar(c.Env, PreloadEnv)
 			require.NotNil(t, preload)
 			assert.Contains(t, preload.Value, expectedInstallPath)
 		}
@@ -123,14 +122,14 @@ func TestReinvoke(t *testing.T) {
 		expectedInstallPath := "my-install"
 		request := createTestMutationRequestWithoutInjectedContainers()
 		request.Pod.Annotations = map[string]string{
-			oacommon.AnnotationInstallPath: expectedInstallPath,
+			AnnotationInstallPath: expectedInstallPath,
 		}
 
 		updated := Reinvoke(request.BaseRequest)
 		require.True(t, updated)
 
 		for _, c := range request.Pod.Spec.Containers {
-			preload := env.FindEnvVar(c.Env, oacommon.PreloadEnv)
+			preload := env.FindEnvVar(c.Env, PreloadEnv)
 			require.NotNil(t, preload)
 			assert.Contains(t, preload.Value, expectedInstallPath)
 		}
@@ -174,15 +173,15 @@ func TestAddOneAgentToContainer(t *testing.T) {
 
 		assert.Len(t, container.VolumeMounts, 3) // preload,bin,config
 
-		dtMetaEnv := env.FindEnvVar(container.Env, oacommon.DynatraceMetadataEnv)
+		dtMetaEnv := env.FindEnvVar(container.Env, DynatraceMetadataEnv)
 		require.NotNil(t, dtMetaEnv)
 		assert.Contains(t, dtMetaEnv.Value, kubeSystemUUID)
 
-		dtZoneEnv := env.FindEnvVar(container.Env, oacommon.NetworkZoneEnv)
+		dtZoneEnv := env.FindEnvVar(container.Env, NetworkZoneEnv)
 		require.NotNil(t, dtZoneEnv)
 		assert.Equal(t, networkZone, dtZoneEnv.Value)
 
-		preload := env.FindEnvVar(container.Env, oacommon.PreloadEnv)
+		preload := env.FindEnvVar(container.Env, PreloadEnv)
 		require.NotNil(t, preload)
 		assert.Contains(t, preload.Value, installPath)
 

@@ -7,8 +7,7 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/api/latest/dynakube"
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/oneagent"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/common/arg"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/arg"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -48,7 +47,7 @@ func addInitArgs(pod corev1.Pod, initContainer *corev1.Container, dk dynakube.Dy
 }
 
 func getTechnology(pod corev1.Pod, dk dynakube.DynaKube) string {
-	if technology, ok := pod.Annotations[oacommon.AnnotationTechnologies]; ok {
+	if technology, ok := pod.Annotations[AnnotationTechnologies]; ok {
 		return technology
 	}
 
@@ -58,4 +57,18 @@ func getTechnology(pod corev1.Pod, dk dynakube.DynaKube) string {
 	}
 
 	return ""
+}
+
+func HasPodUserSet(ctx *corev1.PodSecurityContext) bool {
+	return ctx != nil && ctx.RunAsUser != nil
+}
+
+func HasPodGroupSet(ctx *corev1.PodSecurityContext) bool {
+	return ctx != nil && ctx.RunAsGroup != nil
+}
+
+func IsNonRoot(ctx *corev1.SecurityContext) bool {
+	return ctx != nil &&
+		(ctx.RunAsUser != nil && *ctx.RunAsUser != RootUserGroup) &&
+		(ctx.RunAsGroup != nil && *ctx.RunAsGroup != RootUserGroup)
 }

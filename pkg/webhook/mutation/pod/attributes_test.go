@@ -1,4 +1,4 @@
-package v2
+package pod
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/env"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	metacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/metadata"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/common/volumes"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/volumes"
+	metacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/metadata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -104,7 +104,7 @@ func TestAddPodAttributes(t *testing.T) {
 				Name: "owner",
 			},
 		}
-		injector := createTestInjectorBase()
+		injector := createTestWebhookBase()
 		injector.metaClient = fake.NewClient(&owner, &pod)
 
 		expectedPod := pod.DeepCopy()
@@ -128,7 +128,7 @@ func TestAddPodAttributes(t *testing.T) {
 			InstallContainer: &initContainer,
 		}
 
-		err := injector.addPodAttributes(&request)
+		err := addPodAttributes(&request)
 		require.NoError(t, err)
 		require.NotEqual(t, *expectedPod, *request.Pod)
 
@@ -136,7 +136,7 @@ func TestAddPodAttributes(t *testing.T) {
 	})
 
 	t.Run("metadata enrichment fails => error", func(t *testing.T) {
-		injector := createTestInjectorBase()
+		injector := createTestWebhookBase()
 		injector.metaClient = fake.NewClient()
 
 		initContainer := corev1.Container{
@@ -184,7 +184,7 @@ func TestAddPodAttributes(t *testing.T) {
 			InstallContainer: &initContainer,
 		}
 
-		err := injector.addPodAttributes(&request)
+		err := addPodAttributes(&request)
 		require.Error(t, err)
 		require.Equal(t, *expectedPod, *request.Pod)
 	})

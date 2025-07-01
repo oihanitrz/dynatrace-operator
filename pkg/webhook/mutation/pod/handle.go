@@ -1,7 +1,6 @@
-package v2
+package pod
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/Dynatrace/dynatrace-operator/pkg/consts"
@@ -10,21 +9,12 @@ import (
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/kubeobjects/secret"
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/events"
-	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/oneagent"
-	oamutation "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/oneagent"
+	metacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/metadata"
+	oacommon "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-type Injector struct {
-	recorder    events.EventRecorder
-	kubeClient  client.Client
-	apiReader   client.Reader
-	metaClient  client.Client
-	isOpenShift bool
-}
 
 func IsEnabled(mutationRequest *dtwebhook.MutationRequest) bool {
 	ffEnabled := mutationRequest.DynaKube.FF().IsNodeImagePull()
@@ -40,19 +30,7 @@ func IsEnabled(mutationRequest *dtwebhook.MutationRequest) bool {
 	return ffEnabled && oaEnabled && correctVolumeType
 }
 
-var _ dtwebhook.PodInjector = &Injector{}
-
-func NewInjector(kubeClient client.Client, apiReader client.Reader, metaClient client.Client, recorder events.EventRecorder, isOpenShift bool) *Injector {
-	return &Injector{
-		recorder:    recorder,
-		kubeClient:  kubeClient,
-		apiReader:   apiReader,
-		metaClient:  metaClient,
-		isOpenShift: isOpenShift,
-	}
-}
-
-func (wh *Injector) Handle(_ context.Context, mutationRequest *dtwebhook.MutationRequest) error {
+func (wh *webhook) handle(mutationRequest *dtwebhook.MutationRequest) error {
 	wh.recorder.Setup(mutationRequest)
 
 	if !wh.isInputSecretPresent(mutationRequest, bootstrapperconfig.GetSourceConfigSecretName(mutationRequest.DynaKube.Name), consts.BootstrapperInitSecretName) {
@@ -63,10 +41,6 @@ func (wh *Injector) Handle(_ context.Context, mutationRequest *dtwebhook.Mutatio
 		if !wh.isInputSecretPresent(mutationRequest, bootstrapperconfig.GetSourceCertsSecretName(mutationRequest.DynaKube.Name), consts.BootstrapperInitCertsSecretName) {
 			return nil
 		}
-	}
-
-	if !isCustomImageSet(mutationRequest) {
-		return nil
 	}
 
 	if wh.isInjected(mutationRequest) {
@@ -91,7 +65,7 @@ func (wh *Injector) Handle(_ context.Context, mutationRequest *dtwebhook.Mutatio
 	return nil
 }
 
-func (wh *Injector) isInjected(mutationRequest *dtwebhook.MutationRequest) bool {
+func (wh *webhook) isInjected(mutationRequest *dtwebhook.MutationRequest) bool {
 	installContainer := container.FindInitContainerInPodSpec(&mutationRequest.Pod.Spec, dtwebhook.InstallContainerName)
 	if installContainer != nil {
 		log.Info("Dynatrace init-container already present, skipping mutation, doing reinvocation", "containerName", dtwebhook.InstallContainerName)
@@ -102,7 +76,7 @@ func (wh *Injector) isInjected(mutationRequest *dtwebhook.MutationRequest) bool 
 	return false
 }
 
-func (wh *Injector) handlePodMutation(mutationRequest *dtwebhook.MutationRequest) error {
+func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest) error {
 	mutationRequest.InstallContainer = createInitContainerBase(mutationRequest.Pod, mutationRequest.DynaKube, wh.isOpenShift)
 
 	err := addContainerAttributes(mutationRequest)
@@ -110,17 +84,20 @@ func (wh *Injector) handlePodMutation(mutationRequest *dtwebhook.MutationRequest
 		return err
 	}
 
-	updated := oamutation.Mutate(mutationRequest)
+	updated := oacommon.Mutate(mutationRequest)
 	if !updated {
 		oacommon.SetNotInjectedAnnotations(mutationRequest.Pod, NoMutationNeededReason)
-
-		return nil
 	}
 
-	err = wh.addPodAttributes(mutationRequest)
+	err = addPodAttributes(mutationRequest)
 	if err != nil {
 		log.Info("failed to add pod attributes to init-container")
 
+		return err
+	}
+
+	err = metacommon.Mutate(wh.metaClient, mutationRequest)
+	if err != nil {
 		return err
 	}
 
@@ -132,7 +109,7 @@ func (wh *Injector) handlePodMutation(mutationRequest *dtwebhook.MutationRequest
 	return nil
 }
 
-func (wh *Injector) handlePodReinvocation(mutationRequest *dtwebhook.MutationRequest) bool {
+func (wh *webhook) handlePodReinvocation(mutationRequest *dtwebhook.MutationRequest) bool {
 	mutationRequest.InstallContainer = container.FindInitContainerInPodSpec(&mutationRequest.Pod.Spec, dtwebhook.InstallContainerName)
 
 	err := addContainerAttributes(mutationRequest)
@@ -142,23 +119,12 @@ func (wh *Injector) handlePodReinvocation(mutationRequest *dtwebhook.MutationReq
 		return false
 	}
 
-	updated := oamutation.Reinvoke(mutationRequest.BaseRequest)
+	updated := oacommon.Reinvoke(mutationRequest.BaseRequest)
 
 	return updated
 }
 
-func isCustomImageSet(mutationRequest *dtwebhook.MutationRequest) bool {
-	customImage := mutationRequest.DynaKube.OneAgent().GetCustomCodeModulesImage()
-	if customImage == "" {
-		oacommon.SetNotInjectedAnnotations(mutationRequest.Pod, NoCodeModulesImageReason)
-
-		return false
-	}
-
-	return true
-}
-
-func (wh *Injector) isInputSecretPresent(mutationRequest *dtwebhook.MutationRequest, sourceSecretName, targetSecretName string) bool {
+func (wh *webhook) isInputSecretPresent(mutationRequest *dtwebhook.MutationRequest, sourceSecretName, targetSecretName string) bool {
 	err := wh.replicateSecret(mutationRequest, sourceSecretName, targetSecretName)
 
 	if k8serrors.IsNotFound(err) {
@@ -180,7 +146,7 @@ func (wh *Injector) isInputSecretPresent(mutationRequest *dtwebhook.MutationRequ
 	return true
 }
 
-func (wh *Injector) replicateSecret(mutationRequest *dtwebhook.MutationRequest, sourceSecretName, targetSecretName string) error {
+func (wh *webhook) replicateSecret(mutationRequest *dtwebhook.MutationRequest, sourceSecretName, targetSecretName string) error {
 	var initSecret corev1.Secret
 
 	secretObjectKey := client.ObjectKey{Name: targetSecretName, Namespace: mutationRequest.Namespace.Name}

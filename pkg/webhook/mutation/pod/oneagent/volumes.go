@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/Dynatrace/dynatrace-bootstrapper/pkg/configure/oneagent/preload"
-	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/v2/common/volumes"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/volumes"
 	corev1 "k8s.io/api/core/v1"
 )
 
