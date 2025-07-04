@@ -3,6 +3,7 @@ package bootstrapper
 import (
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd"
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/configure"
+	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/move"
 	"github.com/Dynatrace/dynatrace-operator/cmd/bootstrapper/download"
 	"github.com/Dynatrace/dynatrace-operator/pkg/arch"
 	dtclient "github.com/Dynatrace/dynatrace-operator/pkg/clients/dynatrace"
@@ -20,11 +21,11 @@ const (
 	Use = "bootstrap"
 
 	TargetFolderFlag   = cmd.TargetFolderFlag
-	TargetVersionFlag  = "version"
 	SuppressErrorsFlag = cmd.SuppressErrorsFlag
-	TechnologiesFlag   = "technologies"
-	FlavorFlag         = "flavor"
+	TechnologiesFlag   = move.TechnologyFlag
 
+	TargetVersionFlag      = "version"
+	FlavorFlag             = "flavor"
 	MetadataEnrichmentFlag = "metadata-enrichment"
 )
 

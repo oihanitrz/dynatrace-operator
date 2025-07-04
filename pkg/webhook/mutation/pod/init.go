@@ -17,6 +17,9 @@ import (
 func (wh *webhook) createInitContainerBase(pod *corev1.Pod, dk dynakube.DynaKube) *corev1.Container {
 	args := []arg.Arg{
 		{
+			Name: bootstrapper.Use,
+		},
+		{
 			Name:  configure.ConfigFolderFlag,
 			Value: volumes.InitConfigMountPath,
 		},
@@ -36,10 +39,8 @@ func (wh *webhook) createInitContainerBase(pod *corev1.Pod, dk dynakube.DynaKube
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: securityContextForInitContainer(pod, dk, wh.isOpenShift),
 		Resources:       initContainerResources(dk),
-		Args:            []string{bootstrapper.Use},
+		Args:            arg.ConvertArgsToStrings(args),
 	}
-
-	initContainer.Args = append(initContainer.Args, arg.ConvertArgsToStrings(args)...)
 
 	return initContainer
 }

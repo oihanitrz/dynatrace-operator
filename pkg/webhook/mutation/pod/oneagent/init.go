@@ -1,8 +1,6 @@
 package oneagent
 
 import (
-	"net/url"
-
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd"
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/configure"
 	"github.com/Dynatrace/dynatrace-bootstrapper/cmd/move"
@@ -35,11 +33,6 @@ func mutateInitContainer(mutationRequest *dtwebhook.MutationRequest, installPath
 	} else if !isCSI {
 		downloadArgs := []arg.Arg{
 			{Name: bootstrapper.TargetVersionFlag, Value: mutationRequest.DynaKube.OneAgent().GetCodeModulesVersion()},
-		}
-
-		if technology := url.QueryEscape(maputils.GetField(mutationRequest.Pod.Annotations, AnnotationTechnologies, "")); technology != "" {
-			downloadArgs = append(downloadArgs,
-				arg.Arg{Name: bootstrapper.TechnologiesFlag, Value: technology})
 		}
 
 		if flavor := maputils.GetField(mutationRequest.Pod.Annotations, AnnotationFlavor, ""); flavor != "" {
