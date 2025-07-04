@@ -8,7 +8,4 @@ const (
 	DeploymentName = "dynatrace-webhook"
 
 	WebhookContainerName = "webhook"
-
-	// InstallContainerName is the name used for the install container
-	InstallContainerName = "dynatrace-operator"
 )

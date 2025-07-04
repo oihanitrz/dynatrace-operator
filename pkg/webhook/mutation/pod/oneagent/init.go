@@ -16,8 +16,8 @@ import (
 )
 
 func mutateInitContainer(mutationRequest *dtwebhook.MutationRequest, installPath string) error {
-	isCSI := isCSIVolume(mutationRequest)
-	isSelfExtractingImage := isSelfExtractingImage(mutationRequest, isCSI)
+	isCSI := IsCSIVolume(mutationRequest.BaseRequest)
+	isSelfExtractingImage := IsSelfExtractingImage(mutationRequest.BaseRequest, isCSI)
 
 	if isCSI {
 		addCSIBinVolume(
@@ -85,21 +85,6 @@ func getTechnology(pod corev1.Pod, dk dynakube.DynaKube) string {
 	}
 
 	return ""
-}
-
-func isSelfExtractingImage(mutationRequest *dtwebhook.MutationRequest, isCSI bool) bool {
-	ffEnabled := mutationRequest.DynaKube.FF().IsNodeImagePull()
-
-	return ffEnabled && !isCSI
-}
-
-func isCSIVolume(mutationRequest *dtwebhook.MutationRequest) bool {
-	defaultVolumeType := EphemeralVolumeType
-	if mutationRequest.DynaKube.OneAgent().IsCSIAvailable() {
-		defaultVolumeType = CSIVolumeType
-	}
-
-	return maputils.GetField(mutationRequest.Pod.Annotations, AnnotationVolumeType, defaultVolumeType) == CSIVolumeType
 }
 
 func HasPodUserSet(ctx *corev1.PodSecurityContext) bool {

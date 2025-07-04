@@ -17,9 +17,8 @@ import (
 	versions "github.com/Dynatrace/dynatrace-operator/pkg/controllers/dynakube/version"
 	"github.com/Dynatrace/dynatrace-operator/pkg/injection/namespace/bootstrapperconfig"
 	"github.com/Dynatrace/dynatrace-operator/pkg/injection/namespace/mapper"
-	"github.com/Dynatrace/dynatrace-operator/pkg/injection/startup"
 	"github.com/Dynatrace/dynatrace-operator/pkg/util/installconfig"
-	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook"
+	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	dtclientmock "github.com/Dynatrace/dynatrace-operator/test/mocks/pkg/clients/dynatrace"
 	controllermock "github.com/Dynatrace/dynatrace-operator/test/mocks/pkg/controllers"
 	versionmock "github.com/Dynatrace/dynatrace-operator/test/mocks/pkg/controllers/dynakube/version"
@@ -251,7 +250,6 @@ func TestReconciler(t *testing.T) {
 
 		rec := NewReconciler(boomClient, boomClient, nil, istioClient, dk).(*reconciler)
 		rec.connectionInfoReconciler = fakeReconciler
-		rec.pmcSecretreconciler = fakeReconciler
 		rec.versionReconciler = fakeVersionReconciler
 		rec.monitoredEntitiesReconciler = fakeReconciler
 
@@ -271,7 +269,6 @@ func TestRemoveAppInjection(t *testing.T) {
 	})
 	rec.versionReconciler = createVersionReconcilerMock(t)
 	rec.connectionInfoReconciler = createGenericReconcilerMock(t)
-	rec.pmcSecretreconciler = createGenericReconcilerMock(t)
 	rec.enrichmentRulesReconciler = createGenericReconcilerMock(t)
 	rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
 	setCodeModulesInjectionCreatedCondition(rec.dk.Conditions())
@@ -305,7 +302,6 @@ func TestSetupOneAgentInjection(t *testing.T) {
 		})
 		rec.versionReconciler = createVersionReconcilerMock(t)
 		rec.connectionInfoReconciler = createGenericReconcilerMock(t)
-		rec.pmcSecretreconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
 
 		err := rec.setupOneAgentInjection(context.Background())
@@ -322,7 +318,6 @@ func TestSetupOneAgentInjection(t *testing.T) {
 		})
 		rec.versionReconciler = createVersionReconcilerMock(t)
 		rec.connectionInfoReconciler = createGenericReconcilerMock(t)
-		rec.pmcSecretreconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
 
 		err := rec.setupOneAgentInjection(context.Background())
@@ -339,7 +334,6 @@ func TestSetupOneAgentInjection(t *testing.T) {
 		})
 		rec.versionReconciler = createVersionReconcilerMock(t)
 		rec.connectionInfoReconciler = createGenericReconcilerMock(t)
-		rec.pmcSecretreconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
 
 		err := rec.setupOneAgentInjection(context.Background())
@@ -365,7 +359,6 @@ func TestSetupOneAgentInjection(t *testing.T) {
 		})
 		rec.versionReconciler = createVersionReconcilerMock(t)
 		rec.connectionInfoReconciler = createGenericReconcilerMock(t)
-		rec.pmcSecretreconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
 
 		err := rec.setupOneAgentInjection(context.Background())
@@ -401,7 +394,6 @@ func TestSetupOneAgentInjection(t *testing.T) {
 		rec.dk.Annotations[exp.OANodeImagePullKey] = "true"
 		rec.versionReconciler = createVersionReconcilerMock(t)
 		rec.connectionInfoReconciler = createGenericReconcilerMock(t)
-		rec.pmcSecretreconciler = createGenericReconcilerMock(t)
 		rec.monitoredEntitiesReconciler = createGenericReconcilerMock(t)
 
 		err := rec.setupOneAgentInjection(context.Background())
@@ -482,7 +474,7 @@ func TestGenerateCorrectInitSecret(t *testing.T) {
 		)
 		r := reconciler{client: clt, apiReader: clt, dk: dk}
 
-		err := r.generateCorrectInitSecret(ctx)
+		err := r.generateInitSecret(ctx)
 		require.NoError(t, err)
 
 		for _, ns := range namespaces {
@@ -505,7 +497,7 @@ func TestGenerateCorrectInitSecret(t *testing.T) {
 		)
 		r := reconciler{client: clt, apiReader: clt, dk: dk}
 
-		err := r.generateCorrectInitSecret(ctx)
+		err := r.generateInitSecret(ctx)
 		require.NoError(t, err)
 
 		for _, ns := range namespaces {
@@ -537,7 +529,7 @@ func TestGenerateCorrectInitSecret(t *testing.T) {
 
 		r := reconciler{client: clt, apiReader: clt, dk: dk, dynatraceClient: dtClient}
 
-		err := r.generateCorrectInitSecret(ctx)
+		err := r.generateInitSecret(ctx)
 		require.NoError(t, err)
 
 		for _, ns := range namespaces {
@@ -571,7 +563,7 @@ func TestGenerateCorrectInitSecret(t *testing.T) {
 
 		r := reconciler{client: clt, apiReader: clt, dk: dk, dynatraceClient: dtClient}
 
-		err := r.generateCorrectInitSecret(ctx)
+		err := r.generateInitSecret(ctx)
 		require.NoError(t, err)
 
 		for _, ns := range namespaces {
@@ -613,7 +605,7 @@ func TestCleanupOneAgentInjection(t *testing.T) {
 		)
 		r := reconciler{client: clt, apiReader: clt, dk: dk}
 
-		r.cleanupOneAgentInjection(ctx)
+		r.cleanup(ctx)
 
 		for _, ns := range namespaces {
 			assertSecretNotFound(t, clt, consts.AgentInitSecretName, ns.Name)

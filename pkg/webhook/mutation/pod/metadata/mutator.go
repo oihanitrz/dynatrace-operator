@@ -8,6 +8,7 @@ import (
 	maputils "github.com/Dynatrace/dynatrace-operator/pkg/util/map"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common"
 	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/common/arg"
+	"github.com/Dynatrace/dynatrace-operator/pkg/webhook/mutation/pod/oneagent"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -25,7 +26,10 @@ func NewMutator(metaClient client.Client) dtwebhook.Mutator {
 }
 
 func (mut *Mutator) IsEnabled(request *dtwebhook.BaseRequest) bool {
-	// TODO: handle the implicit metadata-enrichment in the node-image-pull-case
+	if oneagent.IsEnabled(request) && oneagent.IsSelfExtractingImage(request, oneagent.IsCSIVolume(request)) {
+		return true
+	}
+
 	enabledOnPod := maputils.GetFieldBool(request.Pod.Annotations, AnnotationInject,
 		request.DynaKube.FF().IsAutomaticInjection())
 	enabledOnDynakube := request.DynaKube.MetadataEnrichmentEnabled()
