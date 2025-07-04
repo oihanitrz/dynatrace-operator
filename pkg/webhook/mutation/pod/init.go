@@ -32,13 +32,14 @@ func (wh *webhook) createInitContainerBase(pod *corev1.Pod, dk dynakube.DynaKube
 
 	initContainer := &corev1.Container{
 		Name:            dtwebhook.InstallContainerName,
-		Command:         []string{bootstrapper.Use},
 		Image:           wh.webhookPodImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		SecurityContext: securityContextForInitContainer(pod, dk, wh.isOpenShift),
 		Resources:       initContainerResources(dk),
-		Args:            arg.ConvertArgsToStrings(args),
+		Args:            []string{bootstrapper.Use},
 	}
+
+	initContainer.Args = append(initContainer.Args, arg.ConvertArgsToStrings(args)...)
 
 	return initContainer
 }

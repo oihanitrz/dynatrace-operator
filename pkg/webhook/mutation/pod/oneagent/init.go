@@ -29,7 +29,9 @@ func mutateInitContainer(mutationRequest *dtwebhook.MutationRequest, installPath
 	}
 
 	if isSelfExtractingImage {
-		mutationRequest.InstallContainer.Command = []string{}
+		// The first element would be the "bootstrap" sub command, which is not needed incase of self-extracting image
+		mutationRequest.InstallContainer.Args = mutationRequest.InstallContainer.Args[1:]
+
 	} else if !isCSI {
 		downloadArgs := []arg.Arg{
 			{Name: bootstrapper.TargetVersionFlag, Value: mutationRequest.DynaKube.OneAgent().GetCodeModulesVersion()},
