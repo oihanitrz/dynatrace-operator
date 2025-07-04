@@ -75,18 +75,30 @@ func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest)
 		return err
 	}
 
-	err = wh.oaMutator.Mutate(mutationRequest)
-	if err != nil {
-		return err
+
+	var mutated bool
+	if wh.oaMutator.IsEnabled(mutationRequest.BaseRequest) {
+		err = wh.oaMutator.Mutate(mutationRequest)
+		if err != nil {
+			return err
+		}
+
+		mutated = true
 	}
 
-	err = wh.metaMutator.Mutate(mutationRequest)
-	if err != nil {
-		return err
+	if wh.metaMutator.IsEnabled(mutationRequest.BaseRequest) {
+		err = wh.metaMutator.Mutate(mutationRequest)
+		if err != nil {
+			return err
+		}
+
+		mutated = true
 	}
 
-	addInitContainerToPod(mutationRequest.Pod, mutationRequest.InstallContainer)
-	wh.recorder.SendPodInjectEvent()
+	if mutated {
+		addInitContainerToPod(mutationRequest.Pod, mutationRequest.InstallContainer)
+		wh.recorder.SendPodInjectEvent()
+	}
 
 	return nil
 }
