@@ -73,6 +73,8 @@ func (mut *Mutator) Mutate(request *dtwebhook.MutationRequest) error {
 
 	request.InstallContainer.Args = append(request.InstallContainer.Args, args...)
 
+	turnOnMetadataEnrichment(request)
+
 	return nil
 }
 
