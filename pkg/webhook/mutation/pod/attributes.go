@@ -76,7 +76,7 @@ func addContainerAttributes(request *dtwebhook.MutationRequest) error {
 }
 
 func isInjected(container corev1.Container) bool {
-	return mounts.IsIn(container.VolumeMounts, volumes.ConfigVolumeName)
+	return mounts.IsPathIn(container.VolumeMounts, volumes.ConfigMountPath)
 }
 
 func createImageInfo(imageURI string) containerattr.ImageInfo { // TODO: move to bootstrapper repo
