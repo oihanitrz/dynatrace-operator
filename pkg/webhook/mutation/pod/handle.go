@@ -101,7 +101,12 @@ func (wh *webhook) handlePodReinvocation(mutationRequest *dtwebhook.MutationRequ
 		return false
 	}
 
-	updated := wh.oaMutator.Reinvoke(mutationRequest.ToReinvocationRequest())
+	var updated bool
+	if wh.oaMutator.IsEnabled(mutationRequest.BaseRequest) {
+		updated = wh.oaMutator.Reinvoke(mutationRequest.ToReinvocationRequest())
+	}
+
+	// metadata enrichment does not need to be reinvoked, addContainerAttributes() does what is needed
 
 	return updated
 }
