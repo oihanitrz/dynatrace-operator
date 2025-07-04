@@ -35,8 +35,16 @@ func mutateInitContainer(mutationRequest *dtwebhook.MutationRequest, installPath
 	} else if !isCSI {
 		downloadArgs := []arg.Arg{
 			{Name: bootstrapper.TargetVersionFlag, Value: mutationRequest.DynaKube.OneAgent().GetCodeModulesVersion()},
-			{Name: bootstrapper.TechnologiesFlag, Value: url.QueryEscape(maputils.GetField(mutationRequest.Pod.Annotations, AnnotationTechnologies, "all"))},
-			{Name: bootstrapper.FlavorFlag, Value: maputils.GetField(mutationRequest.Pod.Annotations, AnnotationFlavor, "")},
+		}
+
+		if technology := url.QueryEscape(maputils.GetField(mutationRequest.Pod.Annotations, AnnotationTechnologies, "")); technology != "" {
+			downloadArgs = append(downloadArgs,
+				arg.Arg{Name: bootstrapper.TechnologiesFlag, Value: technology})
+		}
+
+		if flavor := maputils.GetField(mutationRequest.Pod.Annotations, AnnotationFlavor, ""); flavor != "" {
+			downloadArgs = append(downloadArgs,
+				arg.Arg{Name: bootstrapper.FlavorFlag, Value: flavor})
 		}
 
 		mutationRequest.InstallContainer.Args = append(mutationRequest.InstallContainer.Args, arg.ConvertArgsToStrings(downloadArgs)...)
