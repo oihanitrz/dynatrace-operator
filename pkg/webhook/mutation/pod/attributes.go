@@ -59,6 +59,8 @@ func addContainerAttributes(request *dtwebhook.MutationRequest) error {
 			ImageInfo:     createImageInfo(c.Image),
 			ContainerName: c.Name,
 		})
+
+		volumes.AddConfigVolumeMount(c)
 	}
 
 	if len(attributes) > 0 {

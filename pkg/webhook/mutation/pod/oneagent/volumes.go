@@ -33,8 +33,6 @@ func addVolumeMounts(container *corev1.Container, installPath string) {
 			SubPath:   filepath.Join(volumes.InitConfigSubPath, ldPreloadSubPath),
 		},
 	)
-
-	volumes.AddConfigVolumeMount(container)
 }
 
 func addInitVolumeMounts(initContainer *corev1.Container) {

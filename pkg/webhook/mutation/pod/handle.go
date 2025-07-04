@@ -63,22 +63,9 @@ func (wh *webhook) isInjected(mutationRequest *dtwebhook.MutationRequest) bool {
 func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest) error {
 	mutationRequest.InstallContainer = wh.createInitContainerBase(mutationRequest.Pod, mutationRequest.DynaKube)
 
-	err := addContainerAttributes(mutationRequest)
-	if err != nil {
-		return err
-	}
-
-	err = addPodAttributes(mutationRequest)
-	if err != nil {
-		log.Info("failed to add pod attributes to init-container")
-
-		return err
-	}
-
-
 	var mutated bool
 	if wh.oaMutator.IsEnabled(mutationRequest.BaseRequest) {
-		err = wh.oaMutator.Mutate(mutationRequest)
+		err := wh.oaMutator.Mutate(mutationRequest)
 		if err != nil {
 			return err
 		}
@@ -87,7 +74,7 @@ func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest)
 	}
 
 	if wh.metaMutator.IsEnabled(mutationRequest.BaseRequest) {
-		err = wh.metaMutator.Mutate(mutationRequest)
+		err := wh.metaMutator.Mutate(mutationRequest)
 		if err != nil {
 			return err
 		}
@@ -96,6 +83,18 @@ func (wh *webhook) handlePodMutation(mutationRequest *dtwebhook.MutationRequest)
 	}
 
 	if mutated {
+		err := addContainerAttributes(mutationRequest)
+		if err != nil {
+			return err
+		}
+
+		err = addPodAttributes(mutationRequest)
+		if err != nil {
+			log.Info("failed to add pod attributes to init-container")
+
+			return err
+		}
+
 		addInitContainerToPod(mutationRequest.Pod, mutationRequest.InstallContainer)
 		wh.recorder.SendPodInjectEvent()
 	}
